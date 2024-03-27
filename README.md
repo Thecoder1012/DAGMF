@@ -30,4 +30,4 @@ python3 preprocessing2.py
 python3 train.py
 ```
 
-<h3>If you need to change model architecture, we recommend to change <i>model.py</i> </h3> 
+If you need to change model architecture, we recommend to change <i>model.py</i>
