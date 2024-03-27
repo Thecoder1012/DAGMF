@@ -98,9 +98,8 @@ for epoch in range(epochs):
         
         # Forward pass
         # print(tabular_data.shape, genetic_data.shape, image_data.shape)
-        outputs = model(tabular_data, genetic_data, image_data)
-        loss = criterion(outputs, torch.max(labels, 1)[1])
-
+        loss, final_output = model(tabular_data, genetic_data, image_data, labels)
+        
         epoch_train_logits.append(outputs.cpu().detach())
         epoch_train_targets.append(labels.cpu().detach())
         

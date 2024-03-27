@@ -195,7 +195,7 @@ class MultimodalNetwork(nn.Module):
         #     nn.Linear(64, n_classes)  # Assuming 3 classes
         # )
     
-    def forward(self, tabular_data, genetic_data, image_data):
+    def forward(self, tabular_data, genetic_data, image_data, labels):
         # print(tabular_data.shape)
         # print(genetic_data.shape)
         # print(image_data.shape)
@@ -214,4 +214,12 @@ class MultimodalNetwork(nn.Module):
         # print(fused_representation.shape)
         # Classification
         output = self.classifier(fused_representation)
-        return output
+        loss_t = criterion(tabular_out, labels)
+        loss_g = criterion(genetic_out, labels)
+        loss_i = criterion(image_out, labels)
+        
+        loss = criterion(output, torch.max(labels, 1)[1])
+        weights = torch.softmax(model.u, dim=0)
+        total_loss = weights[0]*loss_t + weights[1]*loss_g + weights[2]*loss_i + weights[3]*loss
+
+        return total_loss, output
