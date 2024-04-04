@@ -103,6 +103,7 @@ class MultimodalFusionODE(nn.Module):
 class MultimodalNetwork(nn.Module):
     def __init__(self, tabular_data_size, n_classes=3):
         super(MultimodalNetwork, self).__init__()
+        self.u = nn.Parameter(torch.ones(4))
         # Tabular data branch
         self.tabular_branch = nn.Sequential(
             nn.Linear(tabular_data_size, 32),
@@ -121,6 +122,7 @@ class MultimodalNetwork(nn.Module):
             nn.BatchNorm1d(16),
             nn.ReLU()
         )
+        self.tabular_classifier = nn.Linear(16, n_classes)
         
         # Genetic data branch, treating as flat input for simplicity
         self.genetic_branch = nn.Sequential(
@@ -143,6 +145,8 @@ class MultimodalNetwork(nn.Module):
             nn.BatchNorm1d(64),
             nn.ReLU()
         )
+        self.genetic_classifier = nn.Linear(64, n_classes)
+        
         
         # Image data branch (3D CNN for simplicity, adjust as needed)
         self.image_branch = nn.Sequential(
@@ -165,6 +169,7 @@ class MultimodalNetwork(nn.Module):
             nn.LeakyReLU(),
             nn.Flatten()
         )
+        self.image_classifier = nn.Linear(32 * 32 * 32, n_classes)  # Adjust size accordingly
         
         # Attention layers for each modality
         self.tabular_attention = Attention(16, 8)  # Adjust dimensions as needed
@@ -194,6 +199,7 @@ class MultimodalNetwork(nn.Module):
         #     nn.ReLU(),
         #     nn.Linear(64, n_classes)  # Assuming 3 classes
         # )
+        self.criterion = nn.CrossEntropyLoss()
     
     def forward(self, tabular_data, genetic_data, image_data, labels):
         # print(tabular_data.shape)
@@ -202,6 +208,10 @@ class MultimodalNetwork(nn.Module):
         tabular_out = self.tabular_branch(tabular_data)
         genetic_out = self.genetic_branch(genetic_data.view(-1, 500*6))
         image_out = self.image_branch(image_data)
+        tabular_cls = self.tabular_classifier(tabular_out)
+        genetic_cls = self.genetic_classifier(genetic_out)
+        image_cls = self.image_classifier(image_out)
+        
         image_attn = self.image_attention(image_out.unsqueeze(1))
         tabular_attn = self.tabular_attention(tabular_out.unsqueeze(1))
         genetic_attn = self.genetic_attention(genetic_out.unsqueeze(1))
@@ -214,12 +224,12 @@ class MultimodalNetwork(nn.Module):
         # print(fused_representation.shape)
         # Classification
         output = self.classifier(fused_representation)
-        loss_t = criterion(tabular_out, labels)
-        loss_g = criterion(genetic_out, labels)
-        loss_i = criterion(image_out, labels)
+        loss_t = self.criterion(tabular_cls, labels)
+        loss_g = self.criterion(genetic_cls, labels)
+        loss_i = self.criterion(image_cls, labels)
         
-        loss = criterion(output, torch.max(labels, 1)[1])
-        weights = torch.softmax(model.u, dim=0)
+        loss = self.criterion(output, torch.max(labels, 1)[1])
+        weights = torch.softmax(self.u, dim=0)
         total_loss = weights[0]*loss_t + weights[1]*loss_g + weights[2]*loss_i + weights[3]*loss
 
-        return total_loss, output
+        return weights, total_loss, output

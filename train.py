@@ -16,6 +16,8 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns  # For a nicer confusion matrix visualization
+import matplotlib.pyplot as plt
+import numpy as np
 
 scaler = GradScaler()
 
@@ -53,7 +55,7 @@ def train_test_split(dataset, train_ratio=0.7):
 dataset = MultimodalDataset(csv_file='/home/arkaprabha/Documents/Alzheimer_Disease_Detection/Data/v1_dataset/ADNIMERGE_18Sep2023_final2.csv',
                             img_folder='/home/arkaprabha/Documents/Alzheimer_Disease_Detection/Data/images_Adni_final_v2',
                             genetic_folder_path = "/home/arkaprabha/Documents/Alzheimer_Disease_Detection/Data/v1_dataset/ADNI_Genetic_Merge",
-                            transform=PreprocessTransform((64, 64, 64)))
+                            transform=PreprocessTransform((64, 32, 32)))
 
 # Splitting the dataset
 train_dataset, test_dataset = train_test_split(dataset, train_ratio=0.7)
@@ -76,7 +78,8 @@ if not os.path.exists(results_dir):
     os.makedirs(results_dir)
 
 # Training loop
-epochs = 200
+epochs = 65
+weight_history = []
 # print(len(train_loader))
 for epoch in range(epochs):
     loss_list = []
@@ -98,7 +101,7 @@ for epoch in range(epochs):
         
         # Forward pass
         # print(tabular_data.shape, genetic_data.shape, image_data.shape)
-        loss, final_output = model(tabular_data, genetic_data, image_data, labels)
+        weights, loss, outputs = model(tabular_data, genetic_data, image_data, labels)
         
         epoch_train_logits.append(outputs.cpu().detach())
         epoch_train_targets.append(labels.cpu().detach())
@@ -122,6 +125,8 @@ for epoch in range(epochs):
         epoch_train_labels.append(torch.max(labels, 1)[1].cpu())
         epoch_train_predictions.append(predicted.cpu())
 
+    with torch.no_grad():
+        weight_history.append(weights.cpu().numpy())
     epoch_train_logits = torch.cat(epoch_train_logits)
     epoch_train_targets = torch.cat(epoch_train_targets)
     torch.save(epoch_train_logits, os.path.join(results_dir, f'train_logits_epoch_{epoch+1}.pt'))
@@ -142,8 +147,9 @@ for epoch in range(epochs):
             tabular_data, image_data, genetic_data, labels = batch['tabular_data'].to(device), batch['image_data'].to(device), batch['genetic_data'].to(device), batch['label'].to(device)
             
             # Forward pass
-            outputs = model(tabular_data, genetic_data, image_data)
-            loss = criterion(outputs, torch.max(labels, 1)[1])
+            # loss, outputs = model(tabular_data, genetic_data, image_data)
+            # loss = criterion(outputs, torch.max(labels, 1)[1])
+            weights, loss, outputs = model(tabular_data, genetic_data, image_data, labels)
 
             # Collecting logits and targets for analysis
             epoch_test_logits.append(outputs.cpu().detach())
@@ -227,11 +233,25 @@ for epoch in range(epochs):
                 f'Test F1: {test_f1:.4f}\n')
 
     # if (epoch + 1) % 20 == 0:
-    checkpoint_filename = f'modelv6_checkpoint.pth'
+    checkpoint_filename = f'checkpoint.pth'
     checkpoint_path = os.path.join(checkpoint_filename)
     torch.save(model.state_dict(), checkpoint_path)
     print(f"=====>Saved checkpoint: {checkpoint_path}")
-    
+
+# Convert the list of numpy arrays into a 2D numpy array for easier processing
+weight_history_np = np.array(weight_history)
+
+# Plotting
+plt.figure(figsize=(10, 6))
+for i in range(weight_history_np.shape[1]):  # Assuming weight_history_np is of shape [epochs, num_weights]
+    plt.plot(weight_history_np[:, i], label=f'Weight {i+1}')
+
+plt.title('Learnable Weights Progression Over Epochs')
+plt.xlabel('Epoch')
+plt.ylabel('Weight Value')
+plt.legend()
+plt.savefig("Weights_loss.png")
+
 # Testing the model with a single batch
 # with torch.no_grad():
 #     tabular_data, image_data, labels = next(iter(dataloader))
