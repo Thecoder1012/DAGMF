@@ -1,7 +1,7 @@
 # <b>From Images to Genes: Improving Alzheimer's Disease Detection with Dynamic Attention Fusion</b>
 
 <b> Network Architecture</b>
-![DAGMF](https://github.com/Thecoder1012/DAGMF/blob/main/assets/dagmf_network.png)
+![DAGMF](https://github.com/Thecoder1012/DAGMF/blob/main/assets/network.png)
 
 <h2> PyTorch Implementation for <b>DAGMF: Dynamic Attention Guided Multimodal Fusion</b> </h3>
 
