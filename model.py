@@ -135,9 +135,6 @@ class MultimodalNetwork(nn.Module):
             nn.Linear(512, 512),
             nn.BatchNorm1d(512),
             nn.ReLU(),
-            nn.Linear(512, 512),
-            nn.BatchNorm1d(512),
-            nn.PReLU(),
             nn.Linear(512, 128),
             nn.BatchNorm1d(128),
             nn.ReLU(),
@@ -158,6 +155,9 @@ class MultimodalNetwork(nn.Module):
             nn.BatchNorm3d(32),
             nn.ReLU(),
             nn.MaxPool3d(2),
+            nn.Conv3d(32, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm3d(32),
+            nn.ReLU(),
             nn.Conv3d(32, 32, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm3d(32),
             nn.ReLU(),
@@ -228,7 +228,8 @@ class MultimodalNetwork(nn.Module):
         loss_g = self.criterion(genetic_cls, labels)
         loss_i = self.criterion(image_cls, labels)
         
-        loss = self.criterion(output, torch.max(labels, 1)[1])
+        #loss = self.criterion(output, torch.max(labels, 1)[1])
+        loss = self.criterion(output, labels)
         weights = torch.softmax(self.u, dim=0)
         total_loss = weights[0]*loss_t + weights[1]*loss_g + weights[2]*loss_i + weights[3]*loss
 
