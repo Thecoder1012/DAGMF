@@ -33,4 +33,4 @@ python3 train.py
 If you need to change model architecture, we recommend to change <i>model.py</i>
 
 A detailed view presented:
-![DAGMF-V1](https://github.com/Thecoder1012/DAGMF/blob/main/assets/network_architecture_DAGMF_V1.png)
+![DAGMF-V1](https://github.com/Thecoder1012/DAGMF/blob/main/assets/network_architecture_DAGMF_V2.png)
